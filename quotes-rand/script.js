@@ -1,15 +1,13 @@
-const quoteContainer = document.getElementById('quote-container');
-const quoteText = document.getElementById('quote');
-const authorText = document.getElementById('author');
-const twitterBtn = document.getElementById('twitter');
-const newQuoteBtn = document.getElementById('next-quote');
+const body = document.body;
 const loader = document.getElementById('loader');
+const template = document.getElementById('template').innerHTML;
 
 // Fetching quotes from API
 let apiQuotes = [];
 
 async function getQuotes(){
-  loading()
+  
+  loading(true)
   const apiUrl = 'https://type.fit/api/quotes';
 
   try {
@@ -17,40 +15,60 @@ async function getQuotes(){
     apiQuotes = await response.json();
     randQuote();
   } catch (error) {
-    
+    console.log(error)
   }
 };
 
-function loading(){
-  loader.hidden = false;
-  quoteContainer.hidden = true;
+function loading(action){
+  loader.hidden = !action;
+  const elem = body.firstElementChild;
+  if(elem && elem.classList.contains('quote-container')) {
+    elem.hidden = action;
+  }
 }
 
-function loadfull(){
-  quoteContainer.hidden = false;
-  loader.hidden = true;
-
+function strReplace(template, quote){
+  let temp = ` ${template}`.substring(1);
+  const maps = Object.entries({...quote, long: quote.text.length > 50 ? "long-quote": ""});
+  maps.forEach(([key, value]) => {
+    temp = temp.replace(`{${key}}`, value);
+  });
+  return temp;
 }
 
 function randQuote(){
-  loading()
-  const quote = apiQuotes[Math.floor(Math.random() * apiQuotes.length)]
-  quote.author ? authorText.textContent = quote.author : authorText.textContent = 'unknown';
-
-  (quote.text.length > 50) ? quoteText.classList.add('long-quote') : quoteText.classList.remove('long-quote')
-  quoteText.textContent = quote.text;
-  loadfull()
+  loading(true)
+  const quote = apiQuotes[Math.floor(Math.random() * apiQuotes.length)];
+  const elem = body.firstElementChild;
+  const str = strReplace(template, quote);
+  const containerDiv = document.createElement('div');
+  containerDiv.className="quote-container";
+  containerDiv.id="quote-container";
+  containerDiv.innerHTML = str;
+  containerDiv.hidden = true;
+  if (elem && elem.classList.contains('quote-container')) {
+    elem.replaceWith(containerDiv);
+  } else {
+    body.insertBefore(containerDiv, loader);
+  }
+  setTimeout(() => loading(false, containerDiv), 1000)
+  
 }
 
 // Tweet quote
-function tweetQuote(){
-  const twitterUrl = `http://twitter.com/intent/tweet?text=${quoteText.textContent} - ${authorText.textContent}`;
-  window.open(twitterUrl, '_blank');
+function openLinks(e){
+  e.preventDefault();
+  if (e.target.id === 'next-quote') {
+    randQuote();
+  } else if (e.target.id === 'twitter') {
+    const children = Array.from(body.firstElementChild.childNodes);
+    const twitterUrl = `http://twitter.com/intent/tweet?text=${children[1].textContent} - ${children[3].textContent}`;
+    window.open(twitterUrl, '_blank');
+  }
 }
 
 // Event Listeners
-newQuoteBtn.addEventListener('click', randQuote);
-twitterBtn.addEventListener('click', tweetQuote)
+body.addEventListener('click', openLinks);
 
 
 // onload call
